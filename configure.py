@@ -8,4 +8,4 @@ class Setting(BaseSettings):
         extra='ignore'
     )
 
-config = Setting()
+settings = Setting()
