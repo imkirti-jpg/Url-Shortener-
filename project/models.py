@@ -1,3 +1,4 @@
+from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 from db import Base 
 
@@ -12,6 +13,12 @@ class UrlShortner(Base):
     short_url: Mapped[str] = mapped_column(nullable=False)
 
 
+
+class User(Base):
+    __tablename__ = 'users'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    password: Mapped[str] = mapped_column(nullable=False)
 
 
 class RegisterRequest(BaseModel):

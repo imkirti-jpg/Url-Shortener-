@@ -2,6 +2,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from project.models import UrlShortner
 from sqlalchemy import select
 
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from project.service import decode_token
+import jwt
+
+
 def base62encoding(number: int) -> str:
     alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     if number == 0:
@@ -30,3 +36,16 @@ async def query(short_code: str, db:AsyncSession):
     result = await db.execute(stmt)
     url = result.scalar_one_or_none()
     return url
+
+
+
+bearer = HTTPBearer()
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer)) -> str:
+    try:
+        payload = decode_token(credentials.credentials)
+        return payload["sub"]  # email
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
