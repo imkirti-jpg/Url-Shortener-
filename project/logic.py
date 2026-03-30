@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from project.models import UrlShortner
+from db import SessionLocal
+from project.models import Click, UrlShortner
 from sqlalchemy import select
 
 from fastapi import Depends, HTTPException, status
@@ -37,7 +38,21 @@ async def query(short_code: str, db:AsyncSession):
     url = result.scalar_one_or_none()
     return url
 
-
+async def log_click(url_id: int, ip: str | None, user_agent: str | None, referer: str | None):
+    """
+    Fire-and-forget background task. Opens its own DB session so it runs
+    completely independently of the request/response cycle.
+    """
+    async with SessionLocal() as db:
+        click = Click(
+            url_id=url_id,
+            ip_address=ip,
+            user_agent=user_agent,
+            referer=referer,
+        )
+        db.add(click)
+        await db.commit()
+ 
 
 bearer = HTTPBearer()
 
