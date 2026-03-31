@@ -1,7 +1,9 @@
+from cache import redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from db import SessionLocal
 from project.models import Click, UrlShortner
 from sqlalchemy import select
+from configure import settings
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -33,9 +35,18 @@ async def shorten(long_url: str, db: AsyncSession):
     return new_url
 
 async def query(short_code: str, db:AsyncSession):
+    cached = await redis.get(f"url:{short_code}")
+    if cached:
+        # Return object routes.py can use
+        return type("URL", (), {"long_url": cached, "id": None})()
+
     stmt = select(UrlShortner).where(UrlShortner.short_url == short_code)
     result = await db.execute(stmt)
     url = result.scalar_one_or_none()
+
+    if url:
+        await redis.set(f"url:{short_code}", url.long_url, ex=settings.CACHE_TTL)
+
     return url
 
 async def log_click(url_id: int, ip: str | None, user_agent: str | None, referer: str | None):
