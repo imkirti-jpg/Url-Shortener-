@@ -1,14 +1,9 @@
-from cache import redis
+from project.cache import redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from db import SessionLocal
 from project.models import Click, UrlShortner
 from sqlalchemy import select
 from configure import settings
-
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from project.service import decode_token
-import jwt
 
 
 def base62encoding(number: int) -> str:
@@ -63,15 +58,3 @@ async def log_click(url_id: int, ip: str | None, user_agent: str | None, referer
         )
         db.add(click)
         await db.commit()
- 
-
-bearer = HTTPBearer()
-
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer)) -> str:
-    try:
-        payload = decode_token(credentials.credentials)
-        return payload["sub"]  # email
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
