@@ -2,7 +2,7 @@ from sqlalchemy import Boolean, String, DateTime, ForeignKey, func ,Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from db import Base 
 from datetime import datetime
-from Auth.models import User
+
 
 class UrlShortner(Base):
     
@@ -38,3 +38,14 @@ class Click(Base):
     referer: Mapped[str | None] = mapped_column(String, nullable=True)
  
     url: Mapped["UrlShortner"] = relationship(back_populates="clicks")
+
+
+
+    
+class User(Base):
+    __tablename__ = 'users'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    password: Mapped[str] = mapped_column(nullable=False)
+
+    urlshortners: Mapped[list["UrlShortner"]] = relationship(back_populates="owner", cascade="all, delete-orphan")

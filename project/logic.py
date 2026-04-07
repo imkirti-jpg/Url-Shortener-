@@ -1,3 +1,5 @@
+import json
+
 from project.cache import redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from db import SessionLocal
@@ -32,15 +34,19 @@ async def shorten(long_url: str, db: AsyncSession):
 async def query(short_code: str, db:AsyncSession):
     cached = await redis.get(f"url:{short_code}")
     if cached:
-        # Return object routes.py can use
-        return type("URL", (), {"long_url": cached, "id": None})()
+        data = json.loads(cached)
+        return type("URL", (), {"long_url": data["long_url"], "id": data["id"]})()
 
     stmt = select(UrlShortner).where(UrlShortner.short_url == short_code)
     result = await db.execute(stmt)
     url = result.scalar_one_or_none()
 
     if url:
-        await redis.set(f"url:{short_code}", url.long_url, ex=settings.CACHE_TTL)
+        await redis.set(
+            f"url:{short_code}",
+            json.dumps({"id": url.id, "long_url": url.long_url}),
+            ex=settings.CACHE_TTL,
+        )
 
     return url
 

@@ -20,25 +20,6 @@ async def url_shorten_endpoint(
     return await shorten(data.long_url, db)
 
 
-@router.get('/{short_code}', tags=["Api"])
-async def get_code_endpoint(short_code: str, request: Request,
-    background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
-    url = await query(short_code, db)
-    if not url:
-        raise HTTPException(status_code=404, detail="Short URL not found")
-    
-    
-    # Extract request metadata
-    ip = request.client.host if request.client else None
-    user_agent = request.headers.get("user-agent")
-    referer = request.headers.get("referer")
- 
-    # Schedule the DB write — runs after the response is sent
-    background_tasks.add_task(log_click, url.id, ip, user_agent, referer)
- 
-    return RedirectResponse(url=url.long_url, status_code=307)
-
-
 @router.get('/analytics/{short_code}', response_model=AnalyticsResponse, tags=["Api"])
 async def get_analytics_endpoint(short_code: str, db: AsyncSession = Depends(get_db)):
     url = await query(short_code, db)
@@ -56,3 +37,22 @@ async def get_analytics_endpoint(short_code: str, db: AsyncSession = Depends(get
         top_referers=top_referers,
         top_user_agents=top_user_agents
     )
+
+
+@router.get('/{short_code}', tags=["Api"])
+async def get_code_endpoint(short_code: str, request: Request,
+    background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    url = await query(short_code, db)
+    if not url:
+        raise HTTPException(status_code=404, detail="Short URL not found")
+    
+    
+    # Extract request metadata
+    ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    referer = request.headers.get("referer")
+ 
+    # Schedule the DB write — runs after the response is sent
+    background_tasks.add_task(log_click, url.id, ip, user_agent, referer)
+ 
+    return RedirectResponse(url=url.long_url, status_code=307)
