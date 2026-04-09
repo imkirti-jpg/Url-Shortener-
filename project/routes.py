@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import get_db
 from project.schema import UrlResponse, UrlRequest, AnalyticsResponse
+from datetime import datetime, timezone
 from project.logic import log_click, shorten, query
 from project.service import get_total_clicks, get_daily_clicks, get_top_referers, get_top_user_agents
 from Auth.logic import get_current_user
@@ -45,8 +46,16 @@ async def get_code_endpoint(short_code: str, request: Request,
     url = await query(short_code, db)
     if not url:
         raise HTTPException(status_code=404, detail="Short URL not found")
-    
-    
+ 
+    now = datetime.now(timezone.utc)
+ 
+    if not url.is_active:
+        raise HTTPException(status_code=410, detail="This link is no longer active")
+    if url.expires_at and url.expires_at < now:
+        raise HTTPException(status_code=410, detail="This link has expired")
+    if url.max_clicks is not None and url.click_count >= url.max_clicks:
+        raise HTTPException(status_code=410, detail="This link has reached its click limit")
+ 
     # Extract request metadata
     ip = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent")

@@ -6,10 +6,14 @@ from Auth.routes import router as auth_router
 
 app = FastAPI()
 
-@app.on_event('startup')
-async def on_startup() -> None:
-    await create_tables()
+from contextlib import asynccontextmanager
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_tables()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(project_router)
 
