@@ -6,12 +6,17 @@ from project.models import User
 from db import get_db
 from Auth.schemas import RegisterRequest, LoginRequest, TokenResponse
 from Auth.service import hash_password, verify_password, create_access_token
+from project.rate_limiter import rate_limit
 
 
 router = APIRouter(prefix='/api/auth', tags=["Auth"])
 
 
-@router.post('/register', response_model=TokenResponse)
+@router.post(
+    '/register',
+    response_model=TokenResponse,
+    dependencies=[Depends(rate_limit("register", 5, 60))],
+)
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     stmt = select(User).where(User.email == body.email)
     result = await db.execute(stmt)
@@ -25,7 +30,11 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     return TokenResponse(access_token=create_access_token(body.email))
 
 
-@router.post('/login', response_model=TokenResponse)
+@router.post(
+    '/login',
+    response_model=TokenResponse,
+    dependencies=[Depends(rate_limit("login", 10, 60))],
+)
 async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     stmt = select(User).where(User.email == body.email)
     result = await db.execute(stmt)

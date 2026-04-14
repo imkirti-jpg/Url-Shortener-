@@ -8,11 +8,17 @@ from datetime import datetime, timezone
 from project.logic import log_click, shorten, query
 from project.service import get_total_clicks, get_daily_clicks, get_top_referers, get_top_user_agents
 from Auth.logic import get_current_user
+from project.rate_limiter import rate_limit
 
 router = APIRouter(prefix='/api')
 
 
-@router.post('/url_shortner', response_model=UrlResponse, tags=["Api"])
+@router.post(
+    '/url_shortner',
+    response_model=UrlResponse,
+    tags=["Api"],
+    dependencies=[Depends(rate_limit("create_short", 30, 60))],
+)
 async def url_shorten_endpoint(
     data: UrlRequest,
     db: AsyncSession = Depends(get_db),
@@ -21,7 +27,12 @@ async def url_shorten_endpoint(
     return await shorten(data.long_url, db)
 
 
-@router.get('/analytics/{short_code}', response_model=AnalyticsResponse, tags=["Api"])
+@router.get(
+    '/analytics/{short_code}',
+    response_model=AnalyticsResponse,
+    tags=["Api"],
+    dependencies=[Depends(rate_limit("analytics", 30, 60))],
+)
 async def get_analytics_endpoint(short_code: str, db: AsyncSession = Depends(get_db)):
     url = await query(short_code, db)
     if not url:
@@ -40,7 +51,11 @@ async def get_analytics_endpoint(short_code: str, db: AsyncSession = Depends(get
     )
 
 
-@router.get('/{short_code}', tags=["Api"])
+@router.get(
+    '/{short_code}',
+    tags=["Api"],
+    dependencies=[Depends(rate_limit("redirect", 120, 60))],
+)
 async def get_code_endpoint(short_code: str, request: Request,
     background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     url = await query(short_code, db)
