@@ -24,7 +24,13 @@ async def url_shorten_endpoint(
     db: AsyncSession = Depends(get_db),
     current_user: str = Depends(get_current_user)   # protected
 ):
-    return await shorten(data.long_url, db)
+    url = await shorten(data.long_url, db, custom_alias=data.custom_alias)
+
+    return UrlResponse(
+        short_url=url.short_url,
+        long_url=url.long_url,
+        custom_alias=url.custom_alias
+    )
 
 
 @router.get(

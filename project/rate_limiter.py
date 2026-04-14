@@ -7,9 +7,11 @@ def _rate_limit_identity(request: Request) -> str | None:
     # Identity source for rate limiting.
     api_key = request.headers.get("x-api-key")
     if api_key:
-        return api_key.strip()
+        return f"api:{api_key.strip()}"
 
-    return None
+    # fallback to IP for public routes
+    ip = request.client.host if request.client else "anonymous"
+    return f"ip:{ip}"
 
 
 def rate_limit(scope: str, limit: int, window_seconds: int):

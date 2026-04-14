@@ -7,6 +7,7 @@ from project.models import Click, UrlShortner
 from sqlalchemy import select , delete, update
 from configure import settings
 from datetime import datetime, timedelta, timezone
+from fastapi import HTTPException
 
 
 def base62encoding(number: int) -> str:
@@ -20,13 +21,44 @@ def base62encoding(number: int) -> str:
         number = number // 62
     return ''.join(result[::-1])
 
-async def shorten(long_url: str, db: AsyncSession):
+
+async def validate_and_check_alias(alias: str | None, db: AsyncSession) -> str | None:
+    """Validate custom alias format and check if it's available."""
+    if not alias:
+        return None
+    
+    # Check if alias already exists
+    stmt = select(UrlShortner).where(UrlShortner.short_url == alias)
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
+    
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f'Alias "{alias}" is already taken'
+        )
+    
+    return alias
+
+async def shorten(long_url: str, db: AsyncSession, custom_alias: str | None = None):
+    # Validate and check if custom alias is available
+    if custom_alias and custom_alias.strip():
+        custom_alias = await validate_and_check_alias(custom_alias, db)
+    else:
+        custom_alias = None
+    
     new_url = UrlShortner(long_url=long_url, short_url="temp")
     db.add(new_url)
     await db.commit()
     await db.refresh(new_url)
 
-    short_code = base62encoding(new_url.id)
+    # Use custom alias if provided, otherwise generate base62 code
+    if custom_alias:
+        short_code = custom_alias
+        new_url.custom_alias = custom_alias
+    else:
+        short_code = base62encoding(new_url.id)
+    
     new_url.short_url = short_code
     await db.commit()
 
