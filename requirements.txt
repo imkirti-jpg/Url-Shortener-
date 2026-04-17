@@ -5,3 +5,4 @@ pydantic-settings
 PyJWT
 redis
 asyncpg
+sqlalchemy[asyncio]
