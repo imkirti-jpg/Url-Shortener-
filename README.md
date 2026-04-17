@@ -2,6 +2,9 @@
 
 A FastAPI-based URL shortener with JWT auth, Redis caching, Redis-backed rate limiting, and click analytics.
 
+## Demo 
+https://url-shortener-2g3f.onrender.com/docs
+
 ## Features
 
 - User registration and login with JWT tokens
@@ -98,10 +101,10 @@ docker build -t url-shortener .
 
 ```bash
 docker run --rm -p 8000:8000 \
-  -e DATABASE_URL="postgresql+asyncpg://postgres:postgres@host:5432/url_shortener_db" \
+  -e DATABASE_URL= neon database link \
   -e SECRET_KEY="replace_with_a_strong_secret" \
   -e ACCESS_TOKEN_EXPIRE_MINUTES=30 \
-  -e REDIS_URL="redis://host:6379" \
+  -e REDIS_URL= upstash link \
   url-shortener
 ```
 
