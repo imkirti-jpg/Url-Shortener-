@@ -40,28 +40,29 @@ async def validate_and_check_alias(alias: str | None, db: AsyncSession) -> str |
     
     return alias
 
+
+START_OFFSET = 10_000_000  # ensures codes are always 4+ chars
+
+async def _next_id() -> int:
+    """Atomic, Redis-backed counter. No DB round-trip needed."""
+    return await redis.incr("global:url_counter") + START_OFFSET
+
 async def shorten(long_url: str, db: AsyncSession, custom_alias: str | None = None):
-    # Validate and check if custom alias is available
     if custom_alias and custom_alias.strip():
         custom_alias = await validate_and_check_alias(custom_alias, db)
     else:
         custom_alias = None
-    
-    new_url = UrlShortner(long_url=long_url, short_url="temp")
+
+    short_code = custom_alias or base62encoding(await _next_id())
+
+    new_url = UrlShortner(
+        long_url=long_url,
+        short_url=short_code,
+        custom_alias=custom_alias,
+    )
     db.add(new_url)
     await db.commit()
     await db.refresh(new_url)
-
-    # Use custom alias if provided, otherwise generate base62 code
-    if custom_alias:
-        short_code = custom_alias
-        new_url.custom_alias = custom_alias
-    else:
-        short_code = base62encoding(new_url.id)
-    
-    new_url.short_url = short_code
-    await db.commit()
-
     return new_url
 
 async def query(short_code: str, db:AsyncSession):

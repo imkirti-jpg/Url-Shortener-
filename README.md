@@ -88,6 +88,25 @@ Open docs:
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
+## Docker Deployment
+
+Build the image from the project root:
+
+```bash
+docker build -t url-shortener .
+```
+
+```bash
+docker run --rm -p 8000:8000 \
+  -e DATABASE_URL="postgresql+asyncpg://postgres:postgres@host:5432/url_shortener_db" \
+  -e SECRET_KEY="replace_with_a_strong_secret" \
+  -e ACCESS_TOKEN_EXPIRE_MINUTES=30 \
+  -e REDIS_URL="redis://host:6379" \
+  url-shortener
+```
+
+For Render, use this `Dockerfile` and configure the service environment variables in the Render dashboard. The app listens on port `8000` by default.
+
 ## Authentication and Headers
 
 - Auth endpoints and API endpoints are rate-limited using `X-API-Key`.
