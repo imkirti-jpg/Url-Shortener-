@@ -4,7 +4,7 @@ from project.routes import router as project_router
 from Auth.routes import router as auth_router
 
 
-app = FastAPI()
+app = FastAPI(title="LinkSnip Backend")
 
 from contextlib import asynccontextmanager
 
